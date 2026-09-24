@@ -301,6 +301,11 @@ class TeleVuerWrapper:
 
         # TeleVuer (Vuer) obtains all raw data under the (basis) OpenXR Convention.
         Bxr_world_head, head_pose_is_valid = safe_mat_update(CONST_HEAD_POSE, self.tvuer.head_pose)
+        # [r1_mujoco local patch] diagnostics every 2 s: is the headset pose arriving? (arm targets are head-relative)
+        import time as _t
+        if _t.time() - getattr(self, "_dbg_t", 0) > 2.0:
+            self._dbg_t = _t.time()
+            print(f"[televuer] head pose valid={head_pose_is_valid} det={np.linalg.det(self.tvuer.head_pose):.3f} pos(xr)={np.round(Bxr_world_head[:3,3],2).tolist()}", flush=True)
 
         # hand tracking
         if self.use_hand_tracking:

@@ -1,4 +1,8 @@
 from vuer import Vuer
+# [r1_mujoco local patch] immersive-mode image panel height (m at 1 m): default 1.0 ~ 53 deg vertical FOV;
+# set XR_TELEOP_PANEL_HEIGHT=1.7 (~80 deg) together with a matching camera FOV for a fuller view.
+import os as _os
+_PANEL_H = float(_os.getenv("XR_TELEOP_PANEL_HEIGHT", "1.0"))
 from vuer.schemas import ImageBackground, Hands, MotionControllers, WebRTCVideoPlane, WebRTCStereoVideoPlane
 from multiprocessing import Value, Array, Process, shared_memory
 import numpy as np
@@ -220,6 +224,11 @@ class TeleVuer:
                 pass
 
     async def on_cam_move(self, event, session, fps=60):
+        # [r1_mujoco local patch] diagnostics: count head-pose events (needed for the arm mapping)
+        import time as _t
+        self._cam_n = getattr(self, "_cam_n", 0) + 1
+        if _t.time() - getattr(self, "_cam_t", 0) > 2.0:
+            self._cam_t = _t.time(); print(f"[televuer] CAMERA_MOVE events so far: {self._cam_n}", flush=True)
         try:
             with self.head_pose_shared.get_lock():
                 self.head_pose_shared[:] = event.value["camera"]["matrix"]
@@ -344,7 +353,7 @@ class TeleVuer:
                     ImageBackground(
                         self.img2display[:, :self.img_width],
                         aspect=self.aspect_ratio,
-                        height=1,
+                        height=_PANEL_H,
                         distanceToCamera=1,
                         # The underlying rendering engine supported a layer binary bitmask for both objects and the camera. 
                         # Below we set the two image planes, left and right, to layers=1 and layers=2. 
@@ -358,7 +367,7 @@ class TeleVuer:
                     ImageBackground(
                         self.img2display[:, self.img_width:],
                         aspect=self.aspect_ratio,
-                        height=1,
+                        height=_PANEL_H,
                         distanceToCamera=1,
                         layers=2,
                         format="jpeg",
@@ -400,7 +409,7 @@ class TeleVuer:
                     ImageBackground(
                         self.img2display,
                         aspect=self.aspect_ratio,
-                        height=1,
+                        height=_PANEL_H,
                         distanceToCamera=1,
                         format="jpeg",
                         quality=80,
